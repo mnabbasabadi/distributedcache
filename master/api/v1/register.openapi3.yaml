@@ -1,0 +1,109 @@
+openapi: 3.0.3
+info:
+  title: register API
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+    description: local server
+tags:
+  - name: register
+    description: register operations
+  - name: distributed
+    description: Distributed operations
+paths:
+  /register:
+    post:
+      summary: Add node
+      description: Add node
+      tags:
+          - register
+      operationId: registerNode
+      requestBody:
+          $ref: "#/components/requestBodies/Node"
+      responses:
+          201:
+            description: Key added
+          400:
+            $ref: "#/components/responses/ResponseError"
+          404:
+            $ref: "#/components/responses/ResponseError"
+          500:
+            $ref: "#/components/responses/ResponseError"
+  /register/{address}:
+    delete:
+        summary: Delete node
+        description: Delete node
+        tags:
+            - register
+        operationId: unRegisterNode
+        parameters:
+            - $ref: "#/components/parameters/Address"
+        responses:
+            204:
+                description: Key deleted
+            400:
+                $ref: "#/components/responses/ResponseError"
+            404:
+                $ref: "#/components/responses/ResponseError"
+            500:
+                $ref: "#/components/responses/ResponseError"
+  /ready:
+    get:
+      summary: Get readiness status
+      description: Get readiness status
+      tags:
+        - students
+      operationId: getReadiness
+      responses:
+        200:
+          description: Ready
+        503:
+          description: Not ready
+  /live:
+    get:
+      summary: Get liveness status
+      description: Get liveness status
+      tags:
+        - students
+      operationId: getLiveness
+      responses:
+        200:
+          description: Live
+        503:
+          description: Not live
+components:
+  requestBodies:
+    Node:
+      description: Node
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Node'
+  parameters:
+    Address:
+      name: address
+      in: path
+      description: key
+      schema:
+        type: string
+  responses:
+    ResponseError:
+      description: an error response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ResponseError'
+  schemas:
+    Node:
+      type: object
+      required: [address]
+      properties:
+        address:
+          type: string
+          example: localhost:8080
+
+    ResponseError:
+      type: object
+      properties:
+        error:
+          type: string

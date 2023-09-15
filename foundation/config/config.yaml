@@ -1,0 +1,3 @@
+Address: "localhost:8080"
+LogLevel: "debug"
+ServiceName: "converter"
