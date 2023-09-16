@@ -8,8 +8,8 @@ servers:
 tags:
   - name: register
     description: register operations
-  - name: distributed
-    description: Distributed operations
+  - name: cache
+    description: Cache operations
 paths:
   /register:
     post:
@@ -18,8 +18,6 @@ paths:
       tags:
           - register
       operationId: registerNode
-      requestBody:
-          $ref: "#/components/requestBodies/Node"
       responses:
           201:
             description: Key added
@@ -47,12 +45,50 @@ paths:
                 $ref: "#/components/responses/ResponseError"
             500:
                 $ref: "#/components/responses/ResponseError"
+
+  /keys:
+    post:
+      summary: Add key
+      description: Add key
+      tags:
+        - cache
+      operationId: addKey
+      requestBody:
+        $ref: "#/components/requestBodies/KeyValue"
+      responses:
+        204:
+          description: Key added
+        400:
+          $ref: "#/components/responses/ResponseError"
+        404:
+          $ref: "#/components/responses/ResponseError"
+        500:
+          $ref: "#/components/responses/ResponseError"
+  /keys/{key}:
+    get:
+      summary: get value
+      description: get value
+      tags:
+        - cache
+      operationId: getValue
+      parameters:
+        - $ref: "#/components/parameters/Key"
+      responses:
+        200:
+          $ref: "#/components/responses/Value"
+        400:
+          $ref: "#/components/responses/ResponseError"
+        404:
+          $ref: "#/components/responses/ResponseError"
+        500:
+          $ref: "#/components/responses/ResponseError"
+
   /ready:
     get:
       summary: Get readiness status
       description: Get readiness status
       tags:
-        - students
+        - health
       operationId: getReadiness
       responses:
         200:
@@ -64,7 +100,7 @@ paths:
       summary: Get liveness status
       description: Get liveness status
       tags:
-        - students
+        - health
       operationId: getLiveness
       responses:
         200:
@@ -79,9 +115,22 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Node'
+    KeyValue:
+      description: Key value
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/KeyValue"
   parameters:
     Address:
       name: address
+      in: path
+      description: key
+      schema:
+        type: string
+    Key:
+      name: key
       in: path
       description: key
       schema:
@@ -93,6 +142,12 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ResponseError'
+    Value:
+      description: value
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/KeyValue'
   schemas:
     Node:
       type: object
@@ -101,7 +156,14 @@ components:
         address:
           type: string
           example: localhost:8080
-
+    KeyValue:
+      type: object
+      required: [ key, value ]
+      properties:
+        key:
+          type: string
+        value:
+          type: string
     ResponseError:
       type: object
       properties:

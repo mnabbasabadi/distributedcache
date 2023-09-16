@@ -21,9 +21,10 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-// Node defines model for Node.
-type Node struct {
-	Address string `json:"address"`
+// KeyValue defines model for KeyValue.
+type KeyValue struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
 }
 
 // ResponseError defines model for ResponseError.
@@ -34,8 +35,14 @@ type ResponseError struct {
 // Address defines model for Address.
 type Address = string
 
-// RegisterNodeJSONRequestBody defines body for RegisterNode for application/json ContentType.
-type RegisterNodeJSONRequestBody = Node
+// Key defines model for Key.
+type Key = string
+
+// Value defines model for Value.
+type Value = KeyValue
+
+// AddKeyJSONRequestBody defines body for AddKey for application/json ContentType.
+type AddKeyJSONRequestBody = KeyValue
 
 // RequestEditorFn  is the function signature for the RequestEditor callback function
 type RequestEditorFn func(ctx context.Context, req *http.Request) error
@@ -110,19 +117,61 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 
 // The interface specification for the client above.
 type ClientInterface interface {
+	// AddKey request with any body
+	AddKeyWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	AddKey(ctx context.Context, body AddKeyJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetValue request
+	GetValue(ctx context.Context, key Key, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetLiveness request
 	GetLiveness(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetReadiness request
 	GetReadiness(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// RegisterNode request with any body
-	RegisterNodeWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	RegisterNode(ctx context.Context, body RegisterNodeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// RegisterNode request
+	RegisterNode(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// UnRegisterNode request
 	UnRegisterNode(ctx context.Context, address Address, reqEditors ...RequestEditorFn) (*http.Response, error)
+}
+
+func (c *Client) AddKeyWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAddKeyRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) AddKey(ctx context.Context, body AddKeyJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAddKeyRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetValue(ctx context.Context, key Key, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetValueRequest(c.Server, key)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
 }
 
 func (c *Client) GetLiveness(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -149,20 +198,8 @@ func (c *Client) GetReadiness(ctx context.Context, reqEditors ...RequestEditorFn
 	return c.Client.Do(req)
 }
 
-func (c *Client) RegisterNodeWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewRegisterNodeRequestWithBody(c.Server, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) RegisterNode(ctx context.Context, body RegisterNodeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewRegisterNodeRequest(c.Server, body)
+func (c *Client) RegisterNode(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRegisterNodeRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -183,6 +220,80 @@ func (c *Client) UnRegisterNode(ctx context.Context, address Address, reqEditors
 		return nil, err
 	}
 	return c.Client.Do(req)
+}
+
+// NewAddKeyRequest calls the generic AddKey builder with application/json body
+func NewAddKeyRequest(server string, body AddKeyJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewAddKeyRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewAddKeyRequestWithBody generates requests for AddKey with any type of body
+func NewAddKeyRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/keys")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewGetValueRequest generates requests for GetValue
+func NewGetValueRequest(server string, key Key) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "key", runtime.ParamLocationPath, key)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/keys/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
 }
 
 // NewGetLivenessRequest generates requests for GetLiveness
@@ -239,19 +350,8 @@ func NewGetReadinessRequest(server string) (*http.Request, error) {
 	return req, nil
 }
 
-// NewRegisterNodeRequest calls the generic RegisterNode builder with application/json body
-func NewRegisterNodeRequest(server string, body RegisterNodeJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewRegisterNodeRequestWithBody(server, "application/json", bodyReader)
-}
-
-// NewRegisterNodeRequestWithBody generates requests for RegisterNode with any type of body
-func NewRegisterNodeRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+// NewRegisterNodeRequest generates requests for RegisterNode
+func NewRegisterNodeRequest(server string) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -269,12 +369,10 @@ func NewRegisterNodeRequestWithBody(server string, contentType string, body io.R
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", queryURL.String(), body)
+	req, err := http.NewRequest("POST", queryURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
-
-	req.Header.Add("Content-Type", contentType)
 
 	return req, nil
 }
@@ -356,19 +454,74 @@ func WithBaseURL(baseURL string) ClientOption {
 
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
+	// AddKey request with any body
+	AddKeyWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AddKeyResponse, error)
+
+	AddKeyWithResponse(ctx context.Context, body AddKeyJSONRequestBody, reqEditors ...RequestEditorFn) (*AddKeyResponse, error)
+
+	// GetValue request
+	GetValueWithResponse(ctx context.Context, key Key, reqEditors ...RequestEditorFn) (*GetValueResponse, error)
+
 	// GetLiveness request
 	GetLivenessWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetLivenessResponse, error)
 
 	// GetReadiness request
 	GetReadinessWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetReadinessResponse, error)
 
-	// RegisterNode request with any body
-	RegisterNodeWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RegisterNodeResponse, error)
-
-	RegisterNodeWithResponse(ctx context.Context, body RegisterNodeJSONRequestBody, reqEditors ...RequestEditorFn) (*RegisterNodeResponse, error)
+	// RegisterNode request
+	RegisterNodeWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*RegisterNodeResponse, error)
 
 	// UnRegisterNode request
 	UnRegisterNodeWithResponse(ctx context.Context, address Address, reqEditors ...RequestEditorFn) (*UnRegisterNodeResponse, error)
+}
+
+type AddKeyResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON400      *ResponseError
+	JSON404      *ResponseError
+	JSON500      *ResponseError
+}
+
+// Status returns HTTPResponse.Status
+func (r AddKeyResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r AddKeyResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetValueResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *KeyValue
+	JSON400      *ResponseError
+	JSON404      *ResponseError
+	JSON500      *ResponseError
+}
+
+// Status returns HTTPResponse.Status
+func (r GetValueResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetValueResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
 }
 
 type GetLivenessResponse struct {
@@ -461,6 +614,32 @@ func (r UnRegisterNodeResponse) StatusCode() int {
 	return 0
 }
 
+// AddKeyWithBodyWithResponse request with arbitrary body returning *AddKeyResponse
+func (c *ClientWithResponses) AddKeyWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AddKeyResponse, error) {
+	rsp, err := c.AddKeyWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAddKeyResponse(rsp)
+}
+
+func (c *ClientWithResponses) AddKeyWithResponse(ctx context.Context, body AddKeyJSONRequestBody, reqEditors ...RequestEditorFn) (*AddKeyResponse, error) {
+	rsp, err := c.AddKey(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAddKeyResponse(rsp)
+}
+
+// GetValueWithResponse request returning *GetValueResponse
+func (c *ClientWithResponses) GetValueWithResponse(ctx context.Context, key Key, reqEditors ...RequestEditorFn) (*GetValueResponse, error) {
+	rsp, err := c.GetValue(ctx, key, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetValueResponse(rsp)
+}
+
 // GetLivenessWithResponse request returning *GetLivenessResponse
 func (c *ClientWithResponses) GetLivenessWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetLivenessResponse, error) {
 	rsp, err := c.GetLiveness(ctx, reqEditors...)
@@ -479,17 +658,9 @@ func (c *ClientWithResponses) GetReadinessWithResponse(ctx context.Context, reqE
 	return ParseGetReadinessResponse(rsp)
 }
 
-// RegisterNodeWithBodyWithResponse request with arbitrary body returning *RegisterNodeResponse
-func (c *ClientWithResponses) RegisterNodeWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RegisterNodeResponse, error) {
-	rsp, err := c.RegisterNodeWithBody(ctx, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseRegisterNodeResponse(rsp)
-}
-
-func (c *ClientWithResponses) RegisterNodeWithResponse(ctx context.Context, body RegisterNodeJSONRequestBody, reqEditors ...RequestEditorFn) (*RegisterNodeResponse, error) {
-	rsp, err := c.RegisterNode(ctx, body, reqEditors...)
+// RegisterNodeWithResponse request returning *RegisterNodeResponse
+func (c *ClientWithResponses) RegisterNodeWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*RegisterNodeResponse, error) {
+	rsp, err := c.RegisterNode(ctx, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -503,6 +674,93 @@ func (c *ClientWithResponses) UnRegisterNodeWithResponse(ctx context.Context, ad
 		return nil, err
 	}
 	return ParseUnRegisterNodeResponse(rsp)
+}
+
+// ParseAddKeyResponse parses an HTTP response from a AddKeyWithResponse call
+func ParseAddKeyResponse(rsp *http.Response) (*AddKeyResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &AddKeyResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ResponseError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ResponseError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ResponseError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetValueResponse parses an HTTP response from a GetValueWithResponse call
+func ParseGetValueResponse(rsp *http.Response) (*GetValueResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetValueResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest KeyValue
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ResponseError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ResponseError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ResponseError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
 }
 
 // ParseGetLivenessResponse parses an HTTP response from a GetLivenessWithResponse call
@@ -619,6 +877,12 @@ func ParseUnRegisterNodeResponse(rsp *http.Response) (*UnRegisterNodeResponse, e
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Add key
+	// (POST /keys)
+	AddKey(w http.ResponseWriter, r *http.Request)
+	// get value
+	// (GET /keys/{key})
+	GetValue(w http.ResponseWriter, r *http.Request, key Key)
 	// Get liveness status
 	// (GET /live)
 	GetLiveness(w http.ResponseWriter, r *http.Request)
@@ -641,6 +905,47 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// AddKey operation middleware
+func (siw *ServerInterfaceWrapper) AddKey(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddKey(w, r)
+	})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// GetValue operation middleware
+func (siw *ServerInterfaceWrapper) GetValue(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "key" -------------
+	var key Key
+
+	err = runtime.BindStyledParameterWithLocation("simple", false, "key", runtime.ParamLocationPath, chi.URLParam(r, "key"), &key)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetValue(w, r, key)
+	})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
 
 // GetLiveness operation middleware
 func (siw *ServerInterfaceWrapper) GetLiveness(w http.ResponseWriter, r *http.Request) {
@@ -827,6 +1132,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/keys", wrapper.AddKey)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/keys/{key}", wrapper.GetValue)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/live", wrapper.GetLiveness)
 	})
 	r.Group(func(r chi.Router) {
@@ -845,17 +1156,18 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/9RVT2/bPgz9KgZ/v6MRu2sLFL512DAUG4ohwE5FDqrFJupsSZOYYkHg7z5QcuLYcrqh",
-	"2GWnOOK/x/coag+1aa3RqMlDtQcrnGiR0IV/t1I69OFToq+dsqSMhgq+4w5yUPxpBW0gBy1ahApEH5GD",
-	"rzfYCg6lnWWTJ6f0Grquy8Hhjy16em+kwpD+3kjk39poQk38KaxtVC24YvHsuez+JOn/Dp+ggv+KAX8R",
-	"rb4IyUKdMer+nMt7a7SPpZf9n4/OGffXMIyzzoAROkO2ZQcwAVkffkqJdcaio54oMUiCP0VrG6a2MbVo",
-	"NsZTdVPelJAnlEfGlUMJ1cMxx+roaB6fsSbo8pSNcXk8HKcVJqn4SOknE5wVBZwO18oTuuz26x3k8ILO",
-	"RzIuFuWi5PLGohZWQQWXi3JxCXmYr1C6aNRLIGSNlE7kJ6SMHTR6n3kStOUhZOhBvTsZfb70LjAZgndl",
-	"meZkZwZ1XV6mxnsTC0bZtm0r3O4sDhJrz8x72spw1VYcVTgUcvdqS+yhftPT8uDzR00tQ83Xuoqo0rZm",
-	"sJztK+oc5sf4md5upcw0D/i0n2Ufeh+Nw6LYnbtxo13S3/2EiIsUwmfcZUJKlOx+Famaz99nmt5pjrp6",
-	"Q9T1G2qNxDgh7yDAkfGxAMW+v+td7L9BwpSJD+F8Xo9veqLI6QvxMN/F4FIcXpBulUhyNS9JBPnviTIm",
-	"cU4Xdkf3cmBu3HpY4Vm0Qw5b10AFGyJbFcVkvTOXff5pluOCPYroh7f5iKXLkwlQvMgft4RyNlQOduhW",
-	"3a8AAAD//7NtfrQ2CAAA",
+	"H4sIAAAAAAAC/9xW3WvbMBD/V8xtjyZ21w6K37oPSskoI7C+lDxo9jVx40iedAmY4P99nCQ78VfXljHo",
+	"3hzd6e73cVJ0gFRtSyVRkoHkAKXQYouE2v66yjKNxn5maFKdl5QrCQlssIIQcv4sBa0hBCm2CAkIvyME",
+	"k65xK3grVSWHDOlcrqCuQ5hj9YKaLjBdrw5B468dGvqkshwt3DlWd6LYIX+nShJK4k9RlkWeCu4YPRpu",
+	"ezgp/F7jAyTwLjpqErmoidqCtl8X+RyrYG+DDkmuMYOE9A4dNlMqaRyuhf/xVWul/xq4btURhEIGyLGg",
+	"AQN1CP9OoL0PNC4OLCq1KlGTN2/jxqPnc+jLjE7UUfZ7Py8ueRk2yernI6bEZQYedLtjszzs0ivFS7l8",
+	"UDY5p4JjGle5IdTB1fcbRoHaOA3OZvEs5vaqRCnKHBI4n8WzcwjtuNvW0QYrdwyVoeEJucqywJFjvNak",
+	"m8ytz+3y8RhUU3Z1TsqJab05/RBfDPvznIssw4zTL+J4uoev1B9M3nXxil0fX9GLh2233QpddZQjsTI8",
+	"JKlI1whLTrOqR4cNVjV3WeGI9Cuk9oh3xb9GuvOB08vzfhzuMYW1h3o50P0ZTFvL3pQHpxKOuVDke5zU",
+	"/xop4ASJxgSGBO3MmBPffAqMy9qtycmO2fkweKtcwx6JcRwNnTWKgtaej0bhjuEkIc7I/8Bo0eQ8i9LC",
+	"9nyKk0M1JDWCZYKVu9+evqWkyoYnZeG33rpgj83Z/3bfeA0aFVvhujpGB/9kqh3/AgmHSnyx6+Oy/pA9",
+	"YV92DTVvvJGraOIvwIF8e6Z0RRzzhdNR7xvlutQLlYoicHEIYacLSGBNVCZRZGNrZSi5jC9jq6Wv36/S",
+	"vg9aE83xpdtiqcP+vs98U45ucndovax/BwAA//8lkKH8zAsAAA==",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

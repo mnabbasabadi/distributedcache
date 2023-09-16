@@ -8,8 +8,8 @@ servers:
 tags:
   - name: cache
     description: Cache operations
-  - name: distributed
-    description: Distributed operations
+  - name: health
+    description: Health operations
 paths:
   /keys:
     post:
@@ -31,10 +31,10 @@ paths:
             $ref: "#/components/responses/ResponseError"
   /keys/{key}:
     get:
-      summary: Get GPA
-      description: Get GPA for a given student
+      summary: get value
+      description: get value
       tags:
-        - students
+        - cache
       operationId: getValue
       parameters:
           - $ref: "#/components/parameters/Key"
@@ -52,7 +52,7 @@ paths:
       summary: Get readiness status
       description: Get readiness status
       tags:
-        - students
+        - health
       operationId: getReadiness
       responses:
         200:
@@ -64,7 +64,7 @@ paths:
       summary: Get liveness status
       description: Get liveness status
       tags:
-        - students
+        - health
       operationId: getLiveness
       responses:
         200:

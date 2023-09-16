@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"reflect"
 	"time"
 
 	"golang.org/x/exp/slog"
@@ -69,13 +68,6 @@ func WriteTimeout(timeout time.Duration) ServerOption {
 	}
 }
 
-// Cors sets the CORS options applied to the server.
-func Cors(corsOptions cors.Options) ServerOption {
-	return func(options *serverOptions) {
-		options.cors = corsOptions
-	}
-}
-
 // NewServer creates a new instance of the HTTP server wrapper.
 func NewServer(logger slog.Logger, options ...ServerOption) Server {
 	serverOptions := &serverOptions{}
@@ -112,15 +104,7 @@ func (s *Server) Register(registrar func(mux *http.ServeMux)) {
 // Start initializes a new http.Server and starts the server at the provided address.
 func (s *Server) Start(address string, errors chan<- error) {
 	s.address = address
-	var rootHandler http.Handler
-	if reflect.DeepEqual(s.options.cors, cors.Options{}) { // No CORS options provided
-		// cors.Default() sets up the middleware with default options, allowing all origins with simple methods (GET, POST).
-		rootHandler = cors.Default().Handler(s.mux)
-	} else {
-		// Apply CORS options
-		c := cors.New(s.options.cors)
-		rootHandler = c.Handler(s.mux)
-	}
+	rootHandler := Chain(s.mux)
 
 	s.server = &http.Server{
 		Addr:         s.address,
@@ -130,7 +114,8 @@ func (s *Server) Start(address string, errors chan<- error) {
 	}
 
 	go func() {
-		s.logger.Info("Starting REST server at", "addr", s.address)
+		s.logger.Info("Starting REST server at", "addr", s.server.Addr)
+
 		errors <- s.server.ListenAndServe()
 	}()
 

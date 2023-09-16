@@ -1,0 +1,18 @@
+apiVersion: skaffold/v2beta21
+kind: Config
+metadata:
+  name: my-app
+build:
+  artifacts:
+    - image: my-app-master
+      context: .
+      docker:
+        dockerfile: Dockerfile_master
+    - image: my-app-node
+      context: .
+      docker:
+        dockerfile: Dockerfile_node
+deploy:
+  kubectl:
+    manifests:
+      - k8s/*.yaml

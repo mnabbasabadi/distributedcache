@@ -1,0 +1,34 @@
+# Build stage
+FROM golang:1.20-alpine AS builder
+
+# Variables
+ENV APP_PATH=/opt
+ENV APP_NAME=node
+
+# Copy the entire project
+COPY . $APP_PATH/distributedcache
+
+# Set the working directory to where your go.mod file is located
+WORKDIR $APP_PATH/distributedcache/node/service
+
+# Build the Go application
+RUN go build -o main ./cmd/*.go
+
+# Build final image
+FROM alpine:3.17.2
+
+# Variables
+ENV APP_PATH=/opt
+ENV APP_NAME=node
+
+# Set the working directory
+WORKDIR $APP_PATH/$APP_NAME
+
+# Copy the built Go binary from the builder stage to the final image
+COPY --from=builder $APP_PATH/distributedcache/node/service/main $APP_PATH/$APP_NAME/run
+
+EXPOSE 8080
+
+# Run the web service on container startup
+ENTRYPOINT ["/opt/node/run"]
+CMD [""]

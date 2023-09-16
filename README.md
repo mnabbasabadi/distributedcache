@@ -3,51 +3,139 @@
 ## Overview
 
 This project implements a simple distributed in-memory cache with a registry server for node discovery.
+- The registry server is responsible for registering and deregistering nodes.
+- The node server is responsible for storing and retrieving key-value pairs.
+- The registry server uses a hash ring to distribute the nodes.
+- The node server uses a hash ring to distribute the key-value pairs.
+
+
+## Design
+
+Check the design documentation: [docs](./docs)
 
 ## Project Structure
 
 ```
-project-root/
-├── cmd/
-│   ├── registry/
-│   │   └── main.go
-│   └── node/
-│       └── main.go
-├── pkg/
-│   ├── cache/
-│   │   └── cache.go
-│   └── hash/
-│       └── hash_ring.go
-├── internal/
-│   └── registry/
-│       └── registry.go
-├── api/
-│   └── handler.go
-└── README.md
+master 
+├── api
+│   ├── v1
+│   │   ├── master.openapi.yaml  # OpenAPI 3.0.3 specification
+│   │   ├── gen.go                # Script to generate the API code
+│   │   ├── service.config.yaml   # Configuration file for the API
+│   │   └── api.gen.go            # Generated API code
+├── service
+│   ├── cmd
+│   │   └── main.go               # Entrypoint of the service
+│   ├── pkg                        # exportable packages that can be used by other services and defines dependencies
+│   │   ├── app
+│   │   │   └── app.go
+│   ├── tests
+│   │   ├── integration
+│   │   │   ├── integration.go
+│   │   │   └── e2e_test.go
+│   │   ├── support
+│   │   │   └── client
+│   │   │       └── client.go
+│   ├── internal                   # internal packages that are not exported and defines dependencies
+│   │   ├── api                    # API layer
+│   │   │   └── http
+│   │   │       └── handler.go
+│   │   ├── hash                  
+│   │   │   └── hash_ring.go      # Hash ring implementation
+
+node 
+├── api
+│   ├── the same as master
+├── service
+│   ├── cmd     # the same as master
+│   ├── pkg     # the same as master
+│   ├── tests  # the same as master
+│   ├── internal                  
+│   │   ├── api   # the same as master
+│   │   ├── node                  
+│   │   │   └── node.go      # Node implementation
 
 ```
-
-
-## Setup
-
-1. Set up your Go environment.
-2. Clone this repository.
-3. Run the registry server: `go run cmd/registry/main.go`.
-4. Run node servers: `go run cmd/node/main.go`.
 
 ## API
 
 ### Registry Server
-
-- **Register Node**: `POST /register` with JSON body `{ "IpAddr": "127.0.0.1:5000" }`.
-- **Deregister Node**: `POST /deregister` with JSON body `{ "IpAddr": "127.0.0.1:5000" }`.
-- **Get Nodes**: `GET /nodes` to get a list of all registered nodes.
+ 
+link to the openapi specification: [register.openapi3.yaml](master/api/v1/register.openapi3.yaml)
 
 ### Node Server
 
-- **Set Value**: `GET /set?key=<key>&value=<value>`.
-- **Get Value**: `GET /get?key=<key>`.
-- **Delete Value**: `GET /delete?key=<key>`.
+link to the openapi specification: [node.openapi3.yaml](node/api/v1/cache.openapi3.yaml)
+
+
+## Testing
+
+### Unit Tests
+```sh
+make test
+```
+
+### Integration Tests
+```sh
+make test-integration
+```
+
+# Setup
+
+## Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/)
+- [Kubectl](https://kubernetes.io/docs/tasks/tools/)
+- [Minikube](https://minikube.sigs.k8s.io/docs/start/)
+- [Skaffold](https://skaffold.dev/docs/install/) (optional)
+
+### Step 1: Start Minikube
+
+Start your Minikube cluster with the following command:
+
+```sh
+minikube start
+```
+
+### Step 2: Build the Docker Images
+
+```sh
+docker build -t master-image -f Dockerfile_master .
+docker build -t node-image -f Dockerfile_node .
+```
+
+
+### Step 3: Apply Kubernetes Manifests
+
+```sh
+kubectl apply -f k8s/
+```
+
+### Step 4: Access the Master Service
+
+```sh
+minikube ip
+kubectl get service master-service
+```
+
+Use the IP and port to access the master service from your browser or using curl:
+
+```sh
+curl -X POST -H "Content-Type: application/json" -d '{"key":"value3", "value":"value3"}' http://[minikube_ip]:[node_port]/keys 
+curl -H "Content-Type: application/json" http://[minikube_ip]:[node_port]/keys/value3   
+```
+
+# Skafold
+
+If you have Skaffold installed, you can streamline the development process using:
+
+```sh
+skaffold dev
+```
+
+This will watch your source files and automatically rebuild and redeploy your application when changes are detected.
+
+
 
 ## License
 

@@ -1,0 +1,30 @@
+# https://github.com/golangci/golangci-lint#config-file
+run:
+  concurrency: 8
+  timeout: 60s
+  tests: true
+  build-tags:
+    - integration
+output:
+  format: tab
+  sort-results: true
+linters: # Descriptions: https://github.com/golangci/awesome-go-linters
+  # To see those enabled by default `golangci-lint help linters`
+  enable: # These are disabled by default by golangci-lint
+    - dogsled
+    - gochecknoinits
+    - goconst
+    - goimports
+    - gosec
+    - rowserrcheck
+    - unparam
+    - staticcheck
+    - unused
+issues:
+  exclude-use-default: false
+severity:
+  default-severity: error
+  case-sensitive: false
+  rules:
+    - text: 'SA1019:' # The Deprecated warning for 'staticcheck'
+      severity: warn

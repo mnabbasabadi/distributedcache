@@ -1,0 +1,29 @@
+@startuml
+
+!define RECTANGLE class
+
+package "Distributed In-Memory Cache" {
+    RECTANGLE RegistryServer {
+        + registerNode(node: NodeServer)
+        + deregisterNode(node: NodeServer)
+        + getNodeServerForKey(key: String): NodeServer
+        --
+        # HashRing
+    }
+
+    RECTANGLE NodeServer {
+        + storeKeyValuePair(key: String, value: String)
+        + retrieveKeyValuePair(key: String): String
+    }
+
+    class HashRing {
+        + addNode(node: NodeServer)
+        + removeNode(node: NodeServer)
+        + getNodeForKey(key: String): NodeServer
+    }
+
+    RegistryServer --|> HashRing : contains
+    RegistryServer "1" -- "1..*" NodeServer : knows >
+}
+
+@enduml
