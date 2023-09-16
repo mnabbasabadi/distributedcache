@@ -14,7 +14,7 @@ func TestAddNode(t *testing.T) {
 
 	require.Equal(t, 3, len(hr.nodes))
 
-	require.Equal(t, 300, len(hr.hashes))
+	require.Equal(t, 768, len(hr.hashes))
 }
 
 func TestDeleteNode(t *testing.T) {
@@ -24,7 +24,7 @@ func TestDeleteNode(t *testing.T) {
 	hr.DeleteNode("127.0.0.2")
 
 	require.Equal(t, 2, len(hr.nodes))
-	require.Equal(t, 200, len(hr.hashes))
+	require.Equal(t, 512, len(hr.hashes))
 }
 
 func TestGetNode(t *testing.T) {
@@ -32,7 +32,7 @@ func TestGetNode(t *testing.T) {
 	hr := NewHashRing(nodes...)
 
 	node := hr.GetNode("key0")
-	require.Equal(t, "127.0.0.3", node)
+	require.Equal(t, "127.0.0.2", node)
 
 	node = hr.GetNode("key1")
 	require.Equal(t, "127.0.0.2", node)
@@ -77,5 +77,34 @@ func TestGetNode(t *testing.T) {
 
 	node = hr.GetNode("key95")
 	require.Equal(t, "127.0.0.4", node)
+
+}
+
+func TestHashStr(t *testing.T) {
+
+	testCases := map[string]struct {
+		input    string
+		expected uint32
+	}{
+		"empty string": {
+			input:    "",
+			expected: 3820012610,
+		},
+		"non-empty string": {
+			input:    "hello world",
+			expected: 3108841401,
+		},
+		"string with non-ASCII character": {
+			input:    "こんにちは",
+			expected: 307948255,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			actual := hashStr(tc.input)
+			require.Equal(t, tc.expected, actual)
+		})
+	}
 
 }

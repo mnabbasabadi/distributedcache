@@ -1,10 +1,23 @@
+/*
+
+a hash ring data structure that can be used to distribute keys evenly across a set of nodes.
+The hash ring is implemented using a circular array of hash values,
+where each node is assigned a range of hash values based on its index in the array.
+When a key is added to the hash ring, it is hashed and the corresponding node is determined based on its hash value.
+The hash ring is rehashed whenever a node is added or removed to ensure that the distribution of keys is evenly across all nodes.
+
+
+*/
+
 package hash
 
 import (
 	"crypto/sha256"
+	"fmt"
 	"sort"
-	"strconv"
 )
+
+const hashSpace = 1 << 8
 
 type (
 	Hasher interface {
@@ -46,28 +59,32 @@ func (hr *hashRing) DeleteNode(address string) {
 	hr.rehash()
 }
 
+// rehash pre-allocates the hashes array and fills it with the hash values of all nodes.
 func (hr *hashRing) rehash() {
 	hr.hashes = []uint32{}
 	for i, node := range hr.nodes {
-		for j := 0; j < 100; j++ {
-			hr.hashes = append(hr.hashes, hashStr(node.address+strconv.Itoa(i)+strconv.Itoa(j)))
+		for j := 0; j < hashSpace; j++ {
+			hr.hashes = append(hr.hashes, hashStr(fmt.Sprintf("%s-%d", node.address, i*hashSpace+j)))
 		}
 	}
 	sort.Slice(hr.hashes, func(i, j int) bool { return hr.hashes[i] < hr.hashes[j] })
 }
 
+// GetNode returns the address of the node that should handle the given key.
 func (hr *hashRing) GetNode(key string) string {
 	hash := hashStr(key)
 	idx := sort.Search(len(hr.hashes), func(i int) bool { return hr.hashes[i] >= hash })
 	if idx == len(hr.hashes) {
 		idx = 0
 	}
-	return hr.nodes[idx/100].address
+	return hr.nodes[idx/hashSpace].address
 }
 
 func hashStr(key string) uint32 {
 	hash := sha256.New()
 	hash.Write([]byte(key))
 	hashBytes := hash.Sum(nil)
+	// convert first 4 bytes to uint32 it helps to reduce the number of collisions
+	// and distribute keys more evenly across nodes
 	return uint32(hashBytes[0])<<24 | uint32(hashBytes[1])<<16 | uint32(hashBytes[2])<<8 | uint32(hashBytes[3])
 }

@@ -114,15 +114,13 @@ kubectl apply -f k8s/
 ### Step 4: Access the Master Service
 
 ```sh
-minikube ip
-kubectl get service master-service
+minikube service master-service
 ```
-
-Use the IP and port to access the master service from your browser or using curl:
+take note of the IP and port of the master service
 
 ```sh
-curl -X POST -H "Content-Type: application/json" -d '{"key":"value3", "value":"value3"}' http://[minikube_ip]:[node_port]/keys 
-curl -H "Content-Type: application/json" http://[minikube_ip]:[node_port]/keys/value3   
+curl -X POST -H "Content-Type: application/json" -d '{"key":"value3", "value":"value3"}' http://[address]/keys 
+curl -H "Content-Type: application/json" http://[address]/keys/value3   
 ```
 
 # Skafold
@@ -135,6 +133,19 @@ skaffold dev
 
 This will watch your source files and automatically rebuild and redeploy your application when changes are detected.
 
+
+# TODO
+- [ ] Add more tests
+- [ ] Add more documentation
+- [ ] Add metrics 
+- [ ] Add tracing
+- [ ] Add circuit breaker
+- [ ] Add clustering for the master service(leader election)
+- [ ] Add clustering for the node service
+- [ ] master service should be able to handle node failures
+- [ ] Add authentication and authorization
+- [ ] Add TLS
+- [ ] Add more configuration options
 
 
 ## License
