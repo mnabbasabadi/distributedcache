@@ -7,7 +7,8 @@ This project implements a simple distributed in-memory cache with a registry ser
 - The node server is responsible for storing and retrieving key-value pairs.
 - The registry server uses a hash ring to distribute the nodes.
 - The node server uses a hash ring to distribute the key-value pairs.
-
+- since the values will be UTF-8 strings, normalizing keys is used to avoid collisions and for consistency.
+- keys has been checked for UTF-8 validity.
 
 ## Design
 
