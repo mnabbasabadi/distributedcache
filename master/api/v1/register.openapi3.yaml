@@ -1,0 +1,171 @@
+openapi: 3.0.3
+info:
+  title: register API
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+    description: local server
+tags:
+  - name: register
+    description: register operations
+  - name: cache
+    description: Cache operations
+paths:
+  /register:
+    post:
+      summary: Add node
+      description: Add node
+      tags:
+          - register
+      operationId: registerNode
+      responses:
+          201:
+            description: Key added
+          400:
+            $ref: "#/components/responses/ResponseError"
+          404:
+            $ref: "#/components/responses/ResponseError"
+          500:
+            $ref: "#/components/responses/ResponseError"
+  /register/{address}:
+    delete:
+        summary: Delete node
+        description: Delete node
+        tags:
+            - register
+        operationId: unRegisterNode
+        parameters:
+            - $ref: "#/components/parameters/Address"
+        responses:
+            204:
+                description: Key deleted
+            400:
+                $ref: "#/components/responses/ResponseError"
+            404:
+                $ref: "#/components/responses/ResponseError"
+            500:
+                $ref: "#/components/responses/ResponseError"
+
+  /keys:
+    post:
+      summary: Add key
+      description: Add key
+      tags:
+        - cache
+      operationId: addKey
+      requestBody:
+        $ref: "#/components/requestBodies/KeyValue"
+      responses:
+        204:
+          description: Key added
+        400:
+          $ref: "#/components/responses/ResponseError"
+        404:
+          $ref: "#/components/responses/ResponseError"
+        500:
+          $ref: "#/components/responses/ResponseError"
+  /keys/{key}:
+    get:
+      summary: get value
+      description: get value
+      tags:
+        - cache
+      operationId: getValue
+      parameters:
+        - $ref: "#/components/parameters/Key"
+      responses:
+        200:
+          $ref: "#/components/responses/Value"
+        400:
+          $ref: "#/components/responses/ResponseError"
+        404:
+          $ref: "#/components/responses/ResponseError"
+        500:
+          $ref: "#/components/responses/ResponseError"
+
+  /ready:
+    get:
+      summary: Get readiness status
+      description: Get readiness status
+      tags:
+        - health
+      operationId: getReadiness
+      responses:
+        200:
+          description: Ready
+        503:
+          description: Not ready
+  /live:
+    get:
+      summary: Get liveness status
+      description: Get liveness status
+      tags:
+        - health
+      operationId: getLiveness
+      responses:
+        200:
+          description: Live
+        503:
+          description: Not live
+components:
+  requestBodies:
+    Node:
+      description: Node
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Node'
+    KeyValue:
+      description: Key value
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/KeyValue"
+  parameters:
+    Address:
+      name: address
+      in: path
+      description: key
+      schema:
+        type: string
+    Key:
+      name: key
+      in: path
+      description: key
+      schema:
+        type: string
+  responses:
+    ResponseError:
+      description: an error response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ResponseError'
+    Value:
+      description: value
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/KeyValue'
+  schemas:
+    Node:
+      type: object
+      required: [address]
+      properties:
+        address:
+          type: string
+          example: localhost:8080
+    KeyValue:
+      type: object
+      required: [ key, value ]
+      properties:
+        key:
+          type: string
+        value:
+          type: string
+    ResponseError:
+      type: object
+      properties:
+        error:
+          type: string

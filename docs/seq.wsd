@@ -1,0 +1,79 @@
+@startuml
+
+actor Client
+
+entity "RegistryServer" as RegistryServer
+
+entity "NodeServer1" as NodeServer1
+
+entity "NodeServer2" as NodeServer2
+
+entity "HashRing" as HashRing
+
+== Startup ==
+group Startup - NodeServer1
+    NodeServer1 -> RegistryServer : registerNode(self)
+    activate RegistryServer
+    RegistryServer -> HashRing : addNode(NodeServer1)
+    activate HashRing
+    HashRing --> RegistryServer :
+    deactivate HashRing
+    RegistryServer --> NodeServer1 : Node registered
+    deactivate RegistryServer
+end group
+
+group Startup - NodeServer2
+    NodeServer2 -> RegistryServer : registerNode(self)
+    activate RegistryServer
+    RegistryServer -> HashRing : addNode(NodeServer2)
+    activate HashRing
+    HashRing --> RegistryServer :
+    deactivate HashRing
+    RegistryServer --> NodeServer2 : Node registered
+    deactivate RegistryServer
+end group
+
+== Key-Value Store Operations ==
+Client -> RegistryServer : getNodeServerForKey(key)
+activate RegistryServer
+RegistryServer -> HashRing : getNodeForKey(key)
+activate HashRing
+HashRing --> RegistryServer : Return NodeServer
+deactivate HashRing
+RegistryServer --> Client : Return NodeServer
+deactivate RegistryServer
+
+Client -> NodeServer1 : storeKeyValuePair(key, value)
+activate NodeServer1
+NodeServer1 --> Client : Value stored
+deactivate NodeServer1
+
+Client -> NodeServer1 : retrieveKeyValuePair(key)
+activate NodeServer1
+NodeServer1 --> Client : Return value
+deactivate NodeServer1
+
+== Shutdown ==
+group Shutdown - NodeServer1
+    NodeServer1 -> RegistryServer : deregisterNode(self)
+    activate RegistryServer
+    RegistryServer -> HashRing : removeNode(NodeServer1)
+    activate HashRing
+    HashRing --> RegistryServer :
+    deactivate HashRing
+    RegistryServer --> NodeServer1 : Node deregistered
+    deactivate RegistryServer
+end group
+
+group Shutdown - NodeServer2
+    NodeServer2 -> RegistryServer : deregisterNode(self)
+    activate RegistryServer
+    RegistryServer -> HashRing : removeNode(NodeServer2)
+    activate HashRing
+    HashRing --> RegistryServer :
+    deactivate HashRing
+    RegistryServer --> NodeServer2 : Node deregistered
+    deactivate RegistryServer
+end group
+
+@enduml

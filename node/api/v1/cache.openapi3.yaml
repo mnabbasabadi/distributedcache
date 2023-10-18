@@ -1,0 +1,116 @@
+openapi: 3.0.3
+info:
+  title: Cache API
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+    description: local server
+tags:
+  - name: cache
+    description: Cache operations
+  - name: health
+    description: Health operations
+paths:
+  /keys:
+    post:
+      summary: Add key
+      description: Add key
+      tags:
+          - cache
+      operationId: addKey
+      requestBody:
+          $ref: "#/components/requestBodies/KeyValue"
+      responses:
+          204:
+            description: Key added
+          400:
+            $ref: "#/components/responses/ResponseError"
+          404:
+            $ref: "#/components/responses/ResponseError"
+          500:
+            $ref: "#/components/responses/ResponseError"
+  /keys/{key}:
+    get:
+      summary: get value
+      description: get value
+      tags:
+        - cache
+      operationId: getValue
+      parameters:
+          - $ref: "#/components/parameters/Key"
+      responses:
+        200:
+          $ref: "#/components/responses/Value"
+        400:
+          $ref: "#/components/responses/ResponseError"
+        404:
+          $ref: "#/components/responses/ResponseError"
+        500:
+            $ref: "#/components/responses/ResponseError"
+  /ready:
+    get:
+      summary: Get readiness status
+      description: Get readiness status
+      tags:
+        - health
+      operationId: getReadiness
+      responses:
+        200:
+          description: Ready
+        503:
+          description: Not ready
+  /live:
+    get:
+      summary: Get liveness status
+      description: Get liveness status
+      tags:
+        - health
+      operationId: getLiveness
+      responses:
+        200:
+          description: Live
+        503:
+          description: Not live
+components:
+  requestBodies:
+    KeyValue:
+      description: Key value
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/KeyValue"
+  parameters:
+    Key:
+      name: key
+      in: path
+      description: key
+      schema:
+        type: string
+  responses:
+    ResponseError:
+      description: an error response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ResponseError'
+    Value:
+      description: value
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/KeyValue'
+  schemas:
+    KeyValue:
+      type: object
+      required: [key, value]
+      properties:
+        key:
+          type: string
+        value:
+          type: string
+    ResponseError:
+      type: object
+      properties:
+        error:
+          type: string
