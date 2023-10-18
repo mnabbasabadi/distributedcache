@@ -31,8 +31,8 @@ func (s *E2ETestSuite) TestE2E() {
 		s.Equal(key, resp.Key)
 		s.Equal(value, resp.Value)
 
-		val, b := s.node.Get(key)
+		val, b := s.node.Get([]byte(key))
 		s.True(b)
-		s.Equal(value, val)
+		s.EqualValues(value, val)
 	})
 }

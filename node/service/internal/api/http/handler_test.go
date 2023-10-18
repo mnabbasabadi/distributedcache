@@ -32,7 +32,7 @@ func TestServer_GetValue(t *testing.T) {
 			key:      "tests-key",
 			expected: "tests-value",
 			prep: func() {
-				n.Set("tests-key", "tests-value")
+				n.Set([]byte("tests-key"), []byte("tests-value"))
 			},
 			status: http.StatusOK,
 		},

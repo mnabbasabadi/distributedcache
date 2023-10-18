@@ -11,18 +11,18 @@ var defaultExpiration = 30 * time.Minute
 type (
 	node struct {
 		IpAddr string
-		Cache  *cache.Cache
+		Cache  *cache.InMemoryCache
 	}
 	Node interface {
-		Get(string) (string, bool)
-		Set(string, string)
+		Get([]byte) ([]byte, bool)
+		Set([]byte, []byte)
 	}
 )
 
-func (n node) Get(key string) (string, bool) {
+func (n node) Get(key []byte) ([]byte, bool) {
 	return n.Cache.Get(key)
 }
-func (n node) Set(key, value string) {
+func (n node) Set(key, value []byte) {
 	n.Cache.Set(key, value, defaultExpiration)
 }
 

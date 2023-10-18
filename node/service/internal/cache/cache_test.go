@@ -9,58 +9,69 @@ import (
 
 func TestCacheSet(t *testing.T) {
 	c := NewCache()
-	c.Set("key", "value", 5*time.Minute)
-	val, ok := c.Get("key")
-	require.Equal(t, "value", val)
+	c.Set([]byte("key"), []byte("value"), 5*time.Minute)
+	val, ok := c.Get([]byte("key"))
+	require.EqualValues(t, "value", val)
 	require.True(t, ok)
 
 }
 
 func TestCacheGet(t *testing.T) {
 	c := NewCache()
-	c.Set("key", "value", 5*time.Minute)
-	val, ok := c.Get("key")
-	require.Equal(t, "value", val)
+	c.Set([]byte("key"), []byte("value"), 5*time.Minute)
+	val, ok := c.Get([]byte("key"))
+	require.EqualValues(t, "value", val)
 	require.True(t, ok)
-	val, ok = c.Get("nonexistent")
-	require.Equal(t, "", val)
+	val, ok = c.Get([]byte("nonexistent"))
+	require.Nil(t, val)
 	require.False(t, ok)
 }
 
 func TestCacheDelete(t *testing.T) {
 	c := NewCache()
-	c.Set("key", "value", 5*time.Minute)
-	c.Delete("key")
-	val, ok := c.Get("key")
-	require.Equal(t, "", val)
+	c.Set([]byte("key"), []byte("value"), 5*time.Minute)
+	c.Delete([]byte("key"))
+	val, ok := c.Get([]byte("key"))
+	require.Nil(t, val)
 	require.False(t, ok)
 }
 
 func TestCacheCleanup(t *testing.T) {
 	c := NewCache()
-	c.Set("key1", "value1", 2*time.Second)
-	c.Set("key2", "value2", 1*time.Second)
+	c.Set([]byte("key1"), []byte("value1"), 2*time.Second)
+	c.Set([]byte("key2"), []byte("value2"), 1*time.Second)
 
 	time.Sleep(3 * time.Second)
-	val, ok := c.Get("key1")
-	require.Equal(t, "", val)
+	val, ok := c.Get([]byte("key1"))
+	require.Nil(t, val)
 	require.False(t, ok)
 
-	val, ok = c.Get("key2")
-	require.Equal(t, "", val)
+	val, ok = c.Get([]byte("key2"))
+	require.Nil(t, val)
 	require.False(t, ok)
 }
 
-func TestCacheStartCleanupTimer(t *testing.T) {
+func TestCacheStartCleanup(t *testing.T) {
 	c := NewCache()
 	//c.StartCleanupTimer(1 * time.Second)
-	c.Set("key1", "value1", 5*time.Second)
-	c.Set("key2", "value2", 1*time.Second)
+	c.Set([]byte("key1"), []byte("value1"), 5*time.Second)
+	c.Set([]byte("key2"), []byte("value2"), 1*time.Second)
 	time.Sleep(2 * time.Second)
-	val, ok := c.Get("key1")
-	require.Equal(t, "value1", val)
+	val, ok := c.Get([]byte("key1"))
+	require.EqualValues(t, "value1", val)
 	require.True(t, ok)
-	val, ok = c.Get("key2")
-	require.Equal(t, "", val)
+	val, ok = c.Get([]byte("key2"))
+	require.Nil(t, val)
 	require.False(t, ok)
+}
+
+func TestCache_normalizeKey(t *testing.T) {
+	require.EqualValues(t, "hello", normalizeKey([]byte("hello")))
+	require.EqualValues(t, "café", normalizeKey([]byte("café")))
+	require.EqualValues(t, "café", normalizeKey([]byte("cafe\u0301")))
+}
+
+func TestCache_fnv32(t *testing.T) {
+	require.Equal(t, uint32(3069866343), fnv32([]byte("hello")))
+	require.Equal(t, uint32(2609808943), fnv32([]byte("world")))
 }

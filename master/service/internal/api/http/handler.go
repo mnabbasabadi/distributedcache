@@ -38,8 +38,11 @@ func (s server) AddKey(w http.ResponseWriter, r *http.Request) {
 		s.respondError(w, errKeyNotFound, http.StatusBadRequest)
 		return
 	}
+	s.logger.Debug("adding key", "key", keyValue.Key, "value", keyValue.Value)
+
 	url := s.sh.GetNode(keyValue.Key)
 
+	s.logger.Debug("url", "url", url)
 	if url == "" {
 		s.respondError(w, errKeyNotFound, http.StatusNotFound)
 		return
@@ -80,7 +83,10 @@ func (s server) GetValue(w http.ResponseWriter, r *http.Request, key registerAPI
 		s.respondError(w, err, http.StatusInternalServerError)
 		return
 	}
-
+	if resp.JSON200 == nil {
+		s.respondError(w, errKeyNotFound, http.StatusNotFound)
+		return
+	}
 	s.respond(w, *resp.JSON200, http.StatusOK)
 }
 

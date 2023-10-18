@@ -147,6 +147,7 @@ This will watch your source files and automatically rebuild and redeploy your ap
 - [ ] Add authentication and authorization
 - [ ] Add TLS
 - [ ] Add more configuration options
+- [ ] Implement eviction policy to remove old keys and track the memory usage
 
 
 ## License

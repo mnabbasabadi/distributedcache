@@ -43,7 +43,7 @@ func NewHandler(logger *slog.Logger, node node.Node) http.Handler {
 
 }
 func (s server) GetValue(w http.ResponseWriter, _ *http.Request, key cacheAPI.Key) {
-	get, b := s.node.Get(key)
+	get, b := s.node.Get([]byte(key))
 	if !b {
 		s.respondError(w, errKeyNotFound, http.StatusNotFound)
 		return
@@ -51,7 +51,7 @@ func (s server) GetValue(w http.ResponseWriter, _ *http.Request, key cacheAPI.Ke
 
 	s.respond(w, cacheAPI.KeyValue{
 		Key:   key,
-		Value: get,
+		Value: string(get),
 	}, http.StatusOK)
 }
 
@@ -62,7 +62,7 @@ func (s server) AddKey(w http.ResponseWriter, r *http.Request) {
 		s.respondError(w, err, http.StatusBadRequest)
 		return
 	}
-	s.node.Set(keyValue.Key, keyValue.Value)
+	s.node.Set([]byte(keyValue.Key), []byte(keyValue.Value))
 	s.respond(w, nil, http.StatusNoContent)
 }
 
