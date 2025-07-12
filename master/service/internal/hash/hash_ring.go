@@ -34,6 +34,7 @@ type (
 	}
 )
 
+// NewHashRing creates a hash ring with the given node addresses.
 func NewHashRing(addrs ...string) Hasher {
 	nodes := make([]node, len(addrs))
 	for i, addr := range addrs {
@@ -61,7 +62,7 @@ func (hr *hashRing) DeleteNode(address string) {
 
 // rehash pre-allocates the hashes array and fills it with the hash values of all nodes.
 func (hr *hashRing) rehash() {
-	hr.hashes = []uint32{}
+	hr.hashes = make([]uint32, 0, len(hr.nodes)*hashSpace)
 	for i, node := range hr.nodes {
 		for j := 0; j < hashSpace; j++ {
 			hr.hashes = append(hr.hashes, hashStr(fmt.Sprintf("%s-%d", node.address, i*hashSpace+j)))

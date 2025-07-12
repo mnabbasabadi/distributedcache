@@ -15,7 +15,7 @@ import (
 
 type E2ETestSuite struct {
 	suite.Suite
-	node   node.Node
+	node   node.CacheNode
 	client *client.CacheAPITestClient
 	rec    *receiver.Receiver
 }

@@ -13,7 +13,8 @@ type (
 		IpAddr string
 		Cache  *cache.InMemoryCache
 	}
-	Node interface {
+	// CacheNode represents a cache node capable of getting and setting values.
+	CacheNode interface {
 		Get([]byte) ([]byte, bool)
 		Set([]byte, []byte)
 	}
@@ -26,7 +27,8 @@ func (n node) Set(key, value []byte) {
 	n.Cache.Set(key, value, defaultExpiration)
 }
 
-func New(ipAddr string) Node {
+// New returns a CacheNode backed by an in-memory cache.
+func New(ipAddr string) CacheNode {
 	return node{
 		IpAddr: ipAddr,
 		Cache:  cache.NewCache(),

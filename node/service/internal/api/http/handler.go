@@ -20,12 +20,12 @@ var (
 type (
 	server struct {
 		logger *slog.Logger
-		node   node.Node
+		node   node.CacheNode
 	}
 )
 
 // NewHandler returns a new http.Handler that implements the ServerInterface
-func NewHandler(logger *slog.Logger, node node.Node) http.Handler {
+func NewHandler(logger *slog.Logger, node node.CacheNode) http.Handler {
 	s := server{
 		logger: logger,
 		node:   node,

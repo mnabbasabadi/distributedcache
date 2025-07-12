@@ -45,14 +45,7 @@ func UnmarshalJSONFromBody(r *http.Request, target interface{}) (err error) {
 	}
 
 	if err := json.Unmarshal(bodyBytes, target); err != nil {
-		switch err.(type) {
-		case *json.SyntaxError:
-			return fmt.Errorf("while unmarshalling data from body: %w", err)
-		case *json.UnmarshalTypeError:
-			return fmt.Errorf("while unmarshalling data from body: %w", err)
-		default:
-			return fmt.Errorf("while unmarshalling data from body: %w", err)
-		}
+		return fmt.Errorf("while unmarshalling data from body: %w", err)
 	}
 
 	return nil

@@ -22,7 +22,7 @@ type Environment struct {
 	logger *slog.Logger
 
 	HTTPRegister kitHTTP.Registrar
-	node         node.Node
+	node         node.CacheNode
 
 	masterAddr string
 }
@@ -32,7 +32,7 @@ type Params struct {
 	//metrics *Metrics
 	Logger       *slog.Logger
 	HTTPRegister kitHTTP.Registrar
-	Node         node.Node
+	Node         node.CacheNode
 
 	MasterAddr string
 }
