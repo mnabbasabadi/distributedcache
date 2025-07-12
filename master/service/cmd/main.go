@@ -8,6 +8,7 @@ import (
 	"time"
 
 	kitHTTP "github.com/mnabbasbaadi/distributedcache/foundation/http"
+	"github.com/mnabbasbaadi/distributedcache/master/service/internal/cluster"
 	"github.com/mnabbasbaadi/distributedcache/master/service/internal/hash"
 	"github.com/mnabbasbaadi/distributedcache/master/service/pkg/app"
 	"golang.org/x/exp/slog"
@@ -21,7 +22,18 @@ func main() {
 	// Start server
 	serverErrors := make(chan error, 1)
 
-	addr := "0.0.0.0:8080"
+	addr := os.Getenv("MASTER_ADDR")
+	if addr == "" {
+		addr = "0.0.0.0:8080"
+	}
+
+	peers := cluster.ParsePeers(os.Getenv("MASTER_PEERS"))
+	cl := cluster.NewManager(addr, peers)
+	if cl.IsLeader() {
+		logger.Info("starting as leader", "addr", addr)
+	} else {
+		logger.Info("starting as follower", "leader", cl.Leader())
+	}
 
 	httpServer := setupHTTPServer(5*time.Second, 5*time.Second, 5*time.Second, *logger)
 
