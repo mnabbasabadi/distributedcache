@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"sync"
 
 	"github.com/go-chi/chi/v5"
 	httpFramework "github.com/mnabbasbaadi/distributedcache/foundation/http"
@@ -21,10 +22,25 @@ var (
 
 type (
 	server struct {
-		logger *slog.Logger
-		sh     hash.Hasher
+		logger  *slog.Logger
+		sh      hash.Hasher
+		clients sync.Map // map[string]*cacheAPI.ClientWithResponses
 	}
 )
+
+func (s *server) getClient(addr string) (*cacheAPI.ClientWithResponses, error) {
+	if c, ok := s.clients.Load(addr); ok {
+		return c.(*cacheAPI.ClientWithResponses), nil
+	}
+
+	client, err := cacheAPI.NewClientWithResponses(fmt.Sprintf("http://%s", addr))
+	if err != nil {
+		return nil, err
+	}
+
+	actual, _ := s.clients.LoadOrStore(addr, client)
+	return actual.(*cacheAPI.ClientWithResponses), nil
+}
 
 func (s server) AddKey(w http.ResponseWriter, r *http.Request) {
 
@@ -47,8 +63,7 @@ func (s server) AddKey(w http.ResponseWriter, r *http.Request) {
 		s.respondError(w, errKeyNotFound, http.StatusNotFound)
 		return
 	}
-	// TODO: use client from cache
-	client, err := cacheAPI.NewClientWithResponses(fmt.Sprintf("http://%s", url))
+	client, err := s.getClient(url)
 	if err != nil {
 		s.logger.With(err).Error("while creating client")
 		s.respondError(w, err, http.StatusInternalServerError)
@@ -70,8 +85,7 @@ func (s server) GetValue(w http.ResponseWriter, r *http.Request, key registerAPI
 		s.respondError(w, errKeyNotFound, http.StatusNotFound)
 		return
 	}
-	// TODO: use client from cache
-	client, err := cacheAPI.NewClientWithResponses(fmt.Sprintf("http://%s", url))
+	client, err := s.getClient(url)
 	if err != nil {
 		s.logger.With(err).Error("while creating client")
 		s.respondError(w, err, http.StatusInternalServerError)

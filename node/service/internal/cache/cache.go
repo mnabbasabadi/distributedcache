@@ -68,13 +68,15 @@ func (c *InMemoryCache) Get(key []byte) ([]byte, bool) {
 
 	shard := c.getShard(key)
 
-	shard.mu.Lock()
-	defer shard.mu.Unlock()
-
+	shard.mu.RLock()
 	item, found := shard.cache[strKey]
+	shard.mu.RUnlock()
+
 	if !found || item.Expiration < time.Now().UnixNano() {
 		if found {
+			shard.mu.Lock()
 			delete(shard.cache, strKey) // Lazy expiration: remove the item if it is expired
+			shard.mu.Unlock()
 		}
 		return nil, false
 	}
