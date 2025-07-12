@@ -75,3 +75,17 @@ func TestCache_fnv32(t *testing.T) {
 	require.Equal(t, uint32(3069866343), fnv32([]byte("hello")))
 	require.Equal(t, uint32(2609808943), fnv32([]byte("world")))
 }
+
+func TestCacheNormalizedKeyRetrieval(t *testing.T) {
+	c := NewCache()
+	c.Set([]byte("café"), []byte("value"), 5*time.Minute)
+
+	val, ok := c.Get([]byte("cafe\u0301"))
+	require.True(t, ok)
+	require.EqualValues(t, "value", val)
+
+	c.Delete([]byte("cafe\u0301"))
+	val, ok = c.Get([]byte("café"))
+	require.Nil(t, val)
+	require.False(t, ok)
+}

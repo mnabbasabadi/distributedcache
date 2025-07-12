@@ -49,9 +49,9 @@ func (c *InMemoryCache) getShard(key []byte) *CacheShard {
 }
 
 func (c *InMemoryCache) Set(key, value []byte, ttl time.Duration) {
+	key = normalizeKey(key)
 	strKey := base64.StdEncoding.EncodeToString(key)
 
-	key = normalizeKey(key)
 	shard := c.getShard(key)
 
 	shard.mu.Lock()
@@ -63,9 +63,9 @@ func (c *InMemoryCache) Set(key, value []byte, ttl time.Duration) {
 }
 
 func (c *InMemoryCache) Get(key []byte) ([]byte, bool) {
+	key = normalizeKey(key)
 	strKey := base64.StdEncoding.EncodeToString(key)
 
-	key = normalizeKey(key)
 	shard := c.getShard(key)
 
 	shard.mu.Lock()
@@ -82,6 +82,7 @@ func (c *InMemoryCache) Get(key []byte) ([]byte, bool) {
 }
 
 func (c *InMemoryCache) Delete(key []byte) {
+	key = normalizeKey(key)
 	strKey := base64.StdEncoding.EncodeToString(key)
 
 	shard := c.getShard(key)
