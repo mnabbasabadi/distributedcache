@@ -121,10 +121,20 @@ take note of the IP and port of the master service
 
 ```sh
 curl -X POST -H "Content-Type: application/json" -d '{"key":"value3", "value":"value3"}' http://[address]/keys 
-curl -H "Content-Type: application/json" http://[address]/keys/value3   
+curl -H "Content-Type: application/json" http://[address]/keys/value3
 ```
 
-# Skafold
+### Master Clustering
+
+Set the following environment variables before starting each master instance to enable clustering:
+
+```sh
+export MASTER_ADDR=10.0.0.1:8080   # Address of this node
+export MASTER_PEERS=10.0.0.2:8080,10.0.0.3:8080   # Comma-separated peer addresses
+```
+The node with the lowest address becomes the leader.
+
+# Skaffold
 
 If you have Skaffold installed, you can streamline the development process using:
 
@@ -141,7 +151,7 @@ This will watch your source files and automatically rebuild and redeploy your ap
 - [ ] Add metrics 
 - [ ] Add tracing
 - [ ] Add circuit breaker
-- [ ] Add clustering for the master service(leader election)
+- [x] Add clustering for the master service(leader election)
 - [ ] Add clustering for the node service
 - [ ] master service should be able to handle node failures
 - [ ] Add authentication and authorization
